@@ -30,7 +30,7 @@ resource "aws_security_group" "ecs_services" {
   vpc_id = aws_vpc.this.id
 
   ingress {
-    description     = "ALB -> ECS services on 80"
+    description     = "ALB to ECS services on 80"
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
