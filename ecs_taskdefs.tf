@@ -9,11 +9,11 @@ locals {
 # ======== PROD ========
 
 resource "aws_ecs_task_definition" "backend_prod" {
-  family                   = "backend"
+  family                   = "arreglaya-backend-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = tostring(var.be_prod_cpu)     # p.ej. 256
-  memory                   = tostring(var.be_prod_memory)  # p.ej. 512
+  cpu                      = tostring(var.be_prod_cpu)
+  memory                   = tostring(var.be_prod_memory)
   execution_role_arn       = aws_iam_role.task_execution.arn
   runtime_platform { 
     cpu_architecture = "X86_64"
@@ -21,7 +21,7 @@ resource "aws_ecs_task_definition" "backend_prod" {
 }
 
   container_definitions = jsonencode([{
-    name         = var.be_prod_container_name     # "backend"
+    name         = var.be_prod_container_name
     image        = local.be_prod_image
     essential    = true
     portMappings = [{ containerPort = 80, protocol = "tcp" }]
@@ -29,7 +29,9 @@ resource "aws_ecs_task_definition" "backend_prod" {
       { name = "SPRING_PROFILES_ACTIVE",    value = "prod" },
       { name = "SPRING_DATASOURCE_URL",     value = "jdbc:postgresql://${aws_db_instance.prod.address}:5432/${var.db_prod_name}" },
       { name = "SPRING_DATASOURCE_USERNAME",value = var.db_username },
-      { name = "SPRING_DATASOURCE_PASSWORD",value = var.db_prod_password }
+    ]
+    secrets = [
+      { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = aws_secretsmanager_secret.db_prod_password.arn }
     ]
     logConfiguration = {
       logDriver = "awslogs",
@@ -43,11 +45,11 @@ resource "aws_ecs_task_definition" "backend_prod" {
 }
 
 resource "aws_ecs_task_definition" "frontend_prod" {
-  family                   = "frontend"
+  family                   = "arreglaya-frontend-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = tostring(var.fe_prod_cpu)     # ajustable
-  memory                   = tostring(var.fe_prod_memory)  # ajustable
+  cpu                      = tostring(var.fe_prod_cpu)
+  memory                   = tostring(var.fe_prod_memory) 
   execution_role_arn       = aws_iam_role.task_execution.arn
   runtime_platform { 
     cpu_architecture = "X86_64"
@@ -55,7 +57,7 @@ resource "aws_ecs_task_definition" "frontend_prod" {
 }
 
   container_definitions = jsonencode([{
-    name         = var.fe_prod_container_name     # "frontend"
+    name         = var.fe_prod_container_name
     image        = local.fe_prod_image
     essential    = true
     portMappings = [{ containerPort = 80, protocol = "tcp" }]
@@ -77,8 +79,8 @@ resource "aws_ecs_task_definition" "backend_stg" {
   family                   = "backend-stg"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = tostring(var.be_stg_cpu)     # 256 (según tu STG)
-  memory                   = tostring(var.be_stg_memory)  # 512 (según tu STG)
+  cpu                      = tostring(var.be_stg_cpu)
+  memory                   = tostring(var.be_stg_memory)
   execution_role_arn       = aws_iam_role.task_execution.arn
   runtime_platform { 
     cpu_architecture = "X86_64" 
@@ -86,7 +88,7 @@ resource "aws_ecs_task_definition" "backend_stg" {
 }
 
   container_definitions = jsonencode([{
-    name         = var.be_stg_container_name      # "backend-stg"
+    name         = var.be_stg_container_name
     image        = local.be_stg_image
     essential    = true
     portMappings = [{ containerPort = 80, protocol = "tcp" }]
@@ -94,7 +96,9 @@ resource "aws_ecs_task_definition" "backend_stg" {
       { name = "SPRING_PROFILES_ACTIVE",    value = "stg" },
       { name = "SPRING_DATASOURCE_URL",     value = "jdbc:postgresql://${aws_db_instance.stg.address}:5432/${var.db_stg_name}" },
       { name = "SPRING_DATASOURCE_USERNAME",value = var.db_username },
-      { name = "SPRING_DATASOURCE_PASSWORD",value = var.db_stg_password }
+    ]
+    secrets = [
+      { name = "SPRING_DATASOURCE_PASSWORD", valueFrom = aws_secretsmanager_secret.db_stg_password.arn }
     ]
     logConfiguration = {
       logDriver = "awslogs",
@@ -111,8 +115,8 @@ resource "aws_ecs_task_definition" "frontend_stg" {
   family                   = "frontend-stg"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = tostring(var.fe_stg_cpu)     # 1024 (según tu STG)
-  memory                   = tostring(var.fe_stg_memory)  # 3072 (según tu STG)
+  cpu                      = tostring(var.fe_stg_cpu)
+  memory                   = tostring(var.fe_stg_memory)
   execution_role_arn       = aws_iam_role.task_execution.arn
   runtime_platform { 
     cpu_architecture = "X86_64" 
@@ -120,7 +124,7 @@ resource "aws_ecs_task_definition" "frontend_stg" {
 }
 
   container_definitions = jsonencode([{
-    name         = var.fe_stg_container_name       # "frontend-stg"
+    name         = var.fe_stg_container_name
     image        = local.fe_stg_image
     essential    = true
     portMappings = [{ containerPort = 80, protocol = "tcp" }]
