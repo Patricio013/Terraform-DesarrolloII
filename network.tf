@@ -1,4 +1,5 @@
 resource "aws_vpc" "this" {
+  count                = var.create_network ? 1 : 0
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -6,22 +7,24 @@ resource "aws_vpc" "this" {
 }
 
 resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.this.id
+  count  = var.create_network ? 1 : 0
+  vpc_id = aws_vpc.this[0].id
   tags   = { Name = "arreglaya-igw" }
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.this.id
+  count  = var.create_network ? 1 : 0
+  vpc_id = aws_vpc.this[0].id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
+    gateway_id = aws_internet_gateway.igw[0].id
   }
   tags = { Name = "arreglaya-rtb-public" }
 }
 
-# subnets públicas (auto-assign public IP = true)
 resource "aws_subnet" "public_a" {
-  vpc_id                  = aws_vpc.this.id
+  count                   = var.create_network ? 1 : 0
+  vpc_id                  = aws_vpc.this[0].id
   cidr_block              = var.subnet_a_cidr
   availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = true
@@ -29,7 +32,8 @@ resource "aws_subnet" "public_a" {
 }
 
 resource "aws_subnet" "public_b" {
-  vpc_id                  = aws_vpc.this.id
+  count                   = var.create_network ? 1 : 0
+  vpc_id                  = aws_vpc.this[0].id
   cidr_block              = var.subnet_b_cidr
   availability_zone       = "${var.aws_region}b"
   map_public_ip_on_launch = true
@@ -37,7 +41,8 @@ resource "aws_subnet" "public_b" {
 }
 
 resource "aws_subnet" "public_c" {
-  vpc_id                  = aws_vpc.this.id
+  count                   = var.create_network ? 1 : 0
+  vpc_id                  = aws_vpc.this[0].id
   cidr_block              = var.subnet_c_cidr
   availability_zone       = "${var.aws_region}c"
   map_public_ip_on_launch = true
@@ -45,14 +50,24 @@ resource "aws_subnet" "public_c" {
 }
 
 resource "aws_route_table_association" "a" {
-  route_table_id = aws_route_table.public.id
-  subnet_id      = aws_subnet.public_a.id
+  count          = var.create_network ? 1 : 0
+  route_table_id = aws_route_table.public[0].id
+  subnet_id      = aws_subnet.public_a[0].id
 }
 resource "aws_route_table_association" "b" {
-  route_table_id = aws_route_table.public.id
-  subnet_id      = aws_subnet.public_b.id
+  count          = var.create_network ? 1 : 0
+  route_table_id = aws_route_table.public[0].id
+  subnet_id      = aws_subnet.public_b[0].id
 }
 resource "aws_route_table_association" "c" {
-  route_table_id = aws_route_table.public.id
-  subnet_id      = aws_subnet.public_c.id
+  count          = var.create_network ? 1 : 0
+  route_table_id = aws_route_table.public[0].id
+  subnet_id      = aws_subnet.public_c[0].id
+}
+
+# Selección de red/subnets (existente o creada)
+locals {
+  selected_vpc_id = var.create_network ? aws_vpc.this[0].id : var.vpc_id
+
+  selected_public_subnet_ids = var.create_network ? [aws_subnet.public_a[0].id, aws_subnet.public_b[0].id, aws_subnet.public_c[0].id] : var.public_subnet_ids
 }

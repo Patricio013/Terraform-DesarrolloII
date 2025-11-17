@@ -1,12 +1,10 @@
-############################
-# ALB PRODUCCIÓN
-############################
+# ALB PROD
 resource "aws_lb" "prod" {
   name               = "ALB"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id, aws_subnet.public_c.id]
+  security_groups    = [local.alb_sg_id_effective]
+  subnets            = local.selected_public_subnet_ids
 }
 
 resource "aws_lb_target_group" "prod_frontend" {
@@ -14,7 +12,15 @@ resource "aws_lb_target_group" "prod_frontend" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.selected_vpc_id
+  health_check {
+    path = "/"
+    matcher = "200"
+    healthy_threshold = 5
+    unhealthy_threshold = 2
+    interval = 30
+    timeout  = 5
+  }
 }
 
 resource "aws_lb_target_group" "prod_backend" {
@@ -22,10 +28,14 @@ resource "aws_lb_target_group" "prod_backend" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.selected_vpc_id
   health_check {
-    path    = "/actuator/health"
-    matcher = "200-399"
+    path = "/api/actuator/health"
+    matcher = "200"
+    healthy_threshold = 5
+    unhealthy_threshold = 2
+    interval = 30
+    timeout  = 5
   }
 }
 
@@ -41,25 +51,23 @@ resource "aws_lb_listener" "prod_http" {
 
 resource "aws_lb_listener_rule" "prod_api" {
   listener_arn = aws_lb_listener.prod_http.arn
-  priority     = 10
+  priority     = 1
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.prod_backend.arn
   }
-  condition {
-    path_pattern { values = ["/api/*", "/actuator/*"] }
+  condition { 
+    path_pattern { values = ["/api/*", "/actuator/*"] } 
   }
 }
 
-############################
-# ALB STAGING
-############################
+# ALB STG
 resource "aws_lb" "stg" {
   name               = "alb-stg"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id, aws_subnet.public_c.id]
+  security_groups    = [local.alb_sg_id_effective]
+  subnets            = local.selected_public_subnet_ids
 }
 
 resource "aws_lb_target_group" "stg_frontend" {
@@ -67,7 +75,15 @@ resource "aws_lb_target_group" "stg_frontend" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.selected_vpc_id
+  health_check {
+    path = "/"
+    matcher = "200"
+    healthy_threshold = 5
+    unhealthy_threshold = 2
+    interval = 30
+    timeout  = 5
+  }
 }
 
 resource "aws_lb_target_group" "stg_backend" {
@@ -75,10 +91,14 @@ resource "aws_lb_target_group" "stg_backend" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = local.selected_vpc_id
   health_check {
-    path    = "/actuator/health"
-    matcher = "200-399"
+    path = "/"
+    matcher = "200"
+    healthy_threshold = 5
+    unhealthy_threshold = 2
+    interval = 30
+    timeout  = 5
   }
 }
 
@@ -94,12 +114,12 @@ resource "aws_lb_listener" "stg_http" {
 
 resource "aws_lb_listener_rule" "stg_api" {
   listener_arn = aws_lb_listener.stg_http.arn
-  priority     = 10
+  priority     = 1
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.stg_backend.arn
   }
-  condition {
-    path_pattern { values = ["/api/*"] }
+  condition { 
+    path_pattern { values = ["/api/*"] } 
   }
 }
